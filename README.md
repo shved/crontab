@@ -1,10 +1,20 @@
-# Go/Golang package for Crontab tickers [![GoDoc](https://godoc.org/github.com/mileusna/crontab?status.svg)](https://godoc.org/github.com/mileusna/crontab)
+# About this fork
+
+The fork is aimed to add some missing features: 
+* Add interface to get jobs list
+* Add interface to call one particular job by name
+* Avoid overriding `new` function
+
+# TODO
+* add Run method test
+
+# Go/Golang package for Crontab tickers
 
 This package provides crontab tickers to golang apps, supporting crontab-like syntax like `* * * * *` or `*/2 * * * *` etc.
 
 ## Installation <a id="installation"></a>
 ```
-go get github.com/mileusna/crontab
+go get github.com/shved/crontab
 ```
 
 ## Example<a id="example"></a>
@@ -16,7 +26,7 @@ import (
     "fmt"
     "log"
 
-    "github.com/mileusna/crontab"
+    "github.com/shved/crontab"
 )
 
 func main() {
@@ -24,7 +34,7 @@ func main() {
     ctab := crontab.New() // create cron table
 
     // AddJob and test the errors
-    err := ctab.AddJob("0 12 1 * *", myFunc) // on 1st day of month
+    err := ctab.AddJob("0 12 1 * *", "SuperDuperJob", myFunc) // on 1st day of month
     if err != nil {
         log.Println(err)
         return
@@ -32,12 +42,12 @@ func main() {
 
     // MustAddJob is like AddJob but panics on wrong syntax or problems with func/args
     // This aproach is similar to regexp.Compile and regexp.MustCompile from go's standard library,  used for easier initialization on startup
-    ctab.MustAddJob("* * * * *", myFunc) // every minute
-    ctab.MustAddJob("0 12 * * *", myFunc3) // noon lauch
+    ctab.MustAddJob("* * * * *", "special_background_job", myFunc) // every minute
+    ctab.MustAddJob("0 12 * * *", "daily_report_routine", myFunc3) // noon lauch
 
     // fn with args
-    ctab.MustAddJob("0 0 * * 1,2", myFunc2, "Monday and Tuesday midnight", 123) 
-    ctab.MustAddJob("*/5 * * * *", myFunc2, "every five min", 0)
+    ctab.MustAddJob("0 0 * * 1,2", "some_job", myFunc2, "Monday and Tuesday midnight", 123) 
+    ctab.MustAddJob("*/5 * * * *", "some_other_job", "every five min", 0)
 
     // all your other app code as usual, or put sleep timer for demo
     // time.Sleep(10 * time.Minute)
@@ -99,6 +109,3 @@ Here are the few quick references about crontab simple but powerful syntax.
 ## Notice
 
 There is no way to reschedule or to remove single job from crontab during runtime with crontab package. (Re)create new instance of crontab or use `crontab.Clear()` function and then add jobs again to reschedule during runtime.
-
-
-
