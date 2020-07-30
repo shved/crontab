@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/mileusna/crontab"
+	"github.com/shved/crontab"
 )
 
 func ExampleCrontab() {
@@ -12,12 +12,17 @@ func ExampleCrontab() {
 	ctab := crontab.New() // create cron table
 
 	// MustAddJob panics on wrong syntax or problem with func and args for easier initialization
-	ctab.MustAddJob("0 12 * * *", myFunc3)
-	ctab.MustAddJob("* * * * *", myFunc2, "on every minute", 123) // fn with args
-	ctab.MustAddJob("*/2 * * * *", myFunc2, "every two min", 18)
+	ctab.MustAddJob("0 12 * * *", "myFunc3", myFunc3)
+  ctab.MustAddJob("* * * * *", "myFunc2", myFunc2, "on every minute", 123) // fn with args
+	ctab.MustAddJob("*/2 * * * *", "muFunc2_2", myFunc2, "every two min", 18)
+
+  list := ctab.List()
+  if len(list) != 3 {
+    log.Printf("wrong number of jobs: %v", len(list))
+  }
 
 	// or use AddJob if you want to test the error
-	err := ctab.AddJob("* * * * *", myFunc)
+	err := ctab.AddJob("* * * * *", "myFunc", myFunc)
 	if err != nil {
 		log.Println(err)
 		return

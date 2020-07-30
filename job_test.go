@@ -5,52 +5,56 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mileusna/crontab"
+	"github.com/shved/crontab"
 )
 
 func TestJobError(t *testing.T) {
 
 	ctab := crontab.New()
 
-	if err := ctab.AddJob("* * * * *", myFunc, 10); err == nil {
+	if err := ctab.AddJob("* * * * *", "asdf1", myFunc, 10); err == nil {
 		t.Error("This AddJob should return Error, wrong number of args")
 	}
 
-	if err := ctab.AddJob("* * * * *", nil); err == nil {
+	if err := ctab.AddJob("* * * * *", "asdf2", nil); err == nil {
 		t.Error("This AddJob should return Error, fn is nil")
 	}
 
 	var x int
-	if err := ctab.AddJob("* * * * *", x); err == nil {
+	if err := ctab.AddJob("* * * * *", "asdf3", x); err == nil {
 		t.Error("This AddJob should return Error, fn is not func kind")
 	}
 
-	if err := ctab.AddJob("* * * * *", myFunc2, "s", 10, 12); err == nil {
+	if err := ctab.AddJob("* * * * *", "asdf4", myFunc2, "s", 10, 12); err == nil {
 		t.Error("This AddJob should return Error, wrong number of args")
 	}
 
-	if err := ctab.AddJob("* * * * *", myFunc2, "s", "s2"); err == nil {
+	if err := ctab.AddJob("* * * * *", "asdf5", myFunc2, "s", "s2"); err == nil {
 		t.Error("This AddJob should return Error, args are not the correct type")
 	}
 
-	if err := ctab.AddJob("* * * * * *", myFunc2, "s", "s2"); err == nil {
+	if err := ctab.AddJob("* * * * * *", "asdf6", myFunc2, "s", "s2"); err == nil {
 		t.Error("This AddJob should return Error, syntax error")
 	}
 
 	// custom types and interfaces as function params
 	var m MyTypeInterface
-	if err := ctab.AddJob("* * * * *", myFuncStruct, m); err != nil {
+	if err := ctab.AddJob("* * * * *", "asdf7", myFuncStruct, m); err != nil {
 		t.Error(err)
 	}
 
-	if err := ctab.AddJob("* * * * *", myFuncInterface, m); err != nil {
+	if err := ctab.AddJob("* * * * *", "asdf8", myFuncInterface, m); err != nil {
 		t.Error(err)
 	}
 
 	var mwo MyTypeNoInterface
-	if err := ctab.AddJob("* * * * *", myFuncInterface, mwo); err == nil {
+	if err := ctab.AddJob("* * * * *", "asdf9", myFuncInterface, mwo); err == nil {
 		t.Error("This should return error, type that don't implements interface assigned as param")
 	}
+
+  if err := ctab.AddJob("* * * * *", "asdf9", nil); err == nil {
+    t.Error("This should return error, name is already registered")
+  }
 
 	ctab.Shutdown()
 }
@@ -67,11 +71,11 @@ func TestCrontab(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
-	if err := ctab.AddJob("* * * * *", func() { testN++; wg.Done() }); err != nil {
+	if err := ctab.AddJob("* * * * *", "asdf1", func() { testN++; wg.Done() }); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := ctab.AddJob("* * * * *", func(s string) { testS = s; wg.Done() }, "param"); err != nil {
+	if err := ctab.AddJob("* * * * *", "asdf2", func(s string) { testS = s; wg.Done() }, "param"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -102,11 +106,11 @@ func TestRunAll(t *testing.T) {
 
 	ctab := crontab.New()
 
-	if err := ctab.AddJob("* * * * *", func() { testN++ }); err != nil {
+	if err := ctab.AddJob("* * * * *", "asdf1", func() { testN++ }); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := ctab.AddJob("* * * * *", func(s string) { testS = s }, "param"); err != nil {
+	if err := ctab.AddJob("* * * * *", "asdf2", func(s string) { testS = s }, "param"); err != nil {
 		t.Fatal(err)
 	}
 

@@ -14,18 +14,19 @@ import (
 // Crontab struct representing cron table
 type Crontab struct {
 	ticker *time.Ticker
-	jobs   []job
+	Jobs   []Job
 }
 
-// job in cron table
-type job struct {
+// Job in cron table
+type Job struct {
+	Name      string
 	min       map[int]struct{}
 	hour      map[int]struct{}
 	day       map[int]struct{}
 	month     map[int]struct{}
 	dayOfWeek map[int]struct{}
 
-	fn   interface{}
+	Fn   interface{}
 	args []interface{}
 }
 
@@ -40,11 +41,11 @@ type tick struct {
 
 // New initializes and returns new cron table
 func New() *Crontab {
-	return new(time.Minute)
+	return newTab(time.Minute)
 }
 
-// new creates new crontab, arg provided for testing purpose
-func new(t time.Duration) *Crontab {
+// newTab creates new crontab, arg provided for testing purpose
+func newTab(t time.Duration) *Crontab {
 	c := &Crontab{
 		ticker: time.NewTicker(t),
 	}
@@ -67,10 +68,16 @@ func new(t time.Duration) *Crontab {
 // * fn is not function
 //
 // * Provided args don't match the number and/or the type of fn args
-func (c *Crontab) AddJob(schedule string, fn interface{}, args ...interface{}) error {
+func (c *Crontab) AddJob(schedule string, name string, fn interface{}, args ...interface{}) error {
 	j, err := parseSchedule(schedule)
 	if err != nil {
 		return err
+	}
+
+	for _, n := range c.List() {
+		if name == n {
+			return fmt.Errorf("Job named %s already added", name)
+		}
 	}
 
 	if fn == nil || reflect.ValueOf(fn).Kind() != reflect.Func {
@@ -98,9 +105,10 @@ func (c *Crontab) AddJob(schedule string, fn interface{}, args ...interface{}) e
 	}
 
 	// all checked, add job to cron tab
-	j.fn = fn
+	j.Fn = fn
+	j.Name = name
 	j.args = args
-	c.jobs = append(c.jobs, j)
+	c.Jobs = append(c.Jobs, j)
 	return nil
 }
 
@@ -115,8 +123,8 @@ func (c *Crontab) AddJob(schedule string, fn interface{}, args ...interface{}) e
 // * fn is not function
 //
 // * Provided args don't match the number and/or the type of fn args
-func (c *Crontab) MustAddJob(schedule string, fn interface{}, args ...interface{}) {
-	if err := c.AddJob(schedule, fn, args...); err != nil {
+func (c *Crontab) MustAddJob(schedule string, name string, fn interface{}, args ...interface{}) {
+	if err := c.AddJob(schedule, name, fn, args...); err != nil {
 		panic(err)
 	}
 }
@@ -131,20 +139,42 @@ func (c *Crontab) Shutdown() {
 
 // Clear all jobs from cron table
 func (c *Crontab) Clear() {
-	c.jobs = []job{}
+	c.Jobs = []Job{}
 }
 
-// RunAll jobs in cron table, shcheduled or not
+// RunAll jobs in cron table, scheduled or not
 func (c *Crontab) RunAll() {
-	for _, j := range c.jobs {
+	for _, j := range c.Jobs {
 		go j.run()
 	}
+}
+
+// List jobs in cron table, scheduled or not
+func (c *Crontab) List() []string {
+	var names []string
+	for _, j := range c.Jobs {
+		names = append(names, j.Name)
+	}
+
+	return names
+}
+
+// Run calls the job immediately
+func (c *Crontab) Run(name string) error {
+	for _, j := range c.Jobs {
+		if j.Name == name {
+			go j.run()
+			return nil
+		}
+	}
+
+	return fmt.Errorf("job %s not found", name)
 }
 
 // RunScheduled jobs
 func (c *Crontab) runScheduled(t time.Time) {
 	tick := getTick(t)
-	for _, j := range c.jobs {
+	for _, j := range c.Jobs {
 		if j.tick(tick) {
 			go j.run()
 		}
@@ -153,13 +183,13 @@ func (c *Crontab) runScheduled(t time.Time) {
 
 // run the job using reflection
 // Recover from panic although all functions and params are checked by AddJob, but you never know.
-func (j job) run() {
+func (j Job) run() {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Crontab error", r)
 		}
 	}()
-	v := reflect.ValueOf(j.fn)
+	v := reflect.ValueOf(j.Fn)
 	rargs := make([]reflect.Value, len(j.args))
 	for i, a := range j.args {
 		rargs[i] = reflect.ValueOf(a)
@@ -168,7 +198,7 @@ func (j job) run() {
 }
 
 // tick decides should the job be lauhcned at the tick
-func (j job) tick(t tick) bool {
+func (j Job) tick(t tick) bool {
 	if _, ok := j.min[t.min]; !ok {
 		return false
 	}
@@ -199,11 +229,11 @@ var (
 )
 
 // parseSchedule string and creates job struct with filled times to launch, or error if synthax is wrong
-func parseSchedule(s string) (j job, err error) {
+func parseSchedule(s string) (j Job, err error) {
 	s = matchSpaces.ReplaceAllLiteralString(s, " ")
 	parts := strings.Split(s, " ")
 	if len(parts) != 5 {
-		return job{}, errors.New("Schedule string must have five components like * * * * *")
+		return Job{}, errors.New("Schedule string must have five components like * * * * *")
 	}
 
 	j.min, err = parsePart(parts[0], 0, 59)
