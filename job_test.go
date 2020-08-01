@@ -52,9 +52,9 @@ func TestJobError(t *testing.T) {
 		t.Error("This should return error, type that don't implements interface assigned as param")
 	}
 
-  if err := ctab.AddJob("* * * * *", "asdf9", nil); err == nil {
-    t.Error("This should return error, name is already registered")
-  }
+	if err := ctab.AddJob("* * * * *", "asdf9", nil); err == nil {
+		t.Error("This should return error, name is already registered")
+	}
 
 	ctab.Shutdown()
 }
@@ -98,6 +98,37 @@ func TestCrontab(t *testing.T) {
 		t.Error("func 2 not executed as scheduled")
 	}
 	ctab.Shutdown()
+}
+
+func TestRun(t *testing.T) {
+	testN = 0
+	testS = "test"
+
+	ctab := crontab.New()
+
+	if err := ctab.AddJob("* * * * *", "asdf1", func() { testN++ }); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ctab.AddJob("* * * * *", "asdf2", func(s string) { testS = s }, "param"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ctab.Run("asdf1"); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(time.Second)
+	if testN != 1 {
+		t.Error("func not executed on Run()")
+	}
+
+	if testS != "test" {
+		t.Error("wrong func executed on Run()")
+	}
+
+	if err := ctab.Run("missing_job"); err == nil {
+		t.Error("invoking missing func name doesnt throw an error on Run()")
+	}
 }
 
 func TestRunAll(t *testing.T) {
