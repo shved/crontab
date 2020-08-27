@@ -73,6 +73,16 @@ func TestScheduleError(t *testing.T) {
 	}
 }
 
+// TestNewWithTimeZone tests that initialization with timezone sets the timezone to crontab object
+func TestNewWithTimeZone(t *testing.T) {
+	location := time.FixedZone("myzone", -3600)
+	ctab := NewWithLocation(location)
+
+	if ctab.loc != location {
+		t.Error(ctab.loc, "should be set to", location)
+	}
+}
+
 func Fake(sec int) *Crontab {
 	return newTab(time.Duration(sec) * time.Second)
 }

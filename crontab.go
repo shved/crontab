@@ -1,3 +1,4 @@
+// package crontab is a simple go unix crontab implementation
 package crontab
 
 import (
@@ -14,6 +15,7 @@ import (
 // Crontab struct representing cron table
 type Crontab struct {
 	ticker *time.Ticker
+	loc    *time.Location
 	Jobs   []Job
 }
 
@@ -44,19 +46,34 @@ func New() *Crontab {
 	return newTab(time.Minute)
 }
 
+// NewWithLocation initializes and returns new cron table with timezone set up
+func NewWithLocation(loc *time.Location) *Crontab {
+	return newTabWithLocation(time.Minute, loc)
+}
+
+func newTabWithLocation(t time.Duration, l *time.Location) *Crontab {
+	return &Crontab{
+		ticker: time.NewTicker(t),
+		loc:    l,
+	}
+}
+
 // newTab creates new crontab, arg provided for testing purpose
 func newTab(t time.Duration) *Crontab {
-	c := &Crontab{
+	return &Crontab{
 		ticker: time.NewTicker(t),
+		loc:    time.Local,
 	}
+}
 
+// Start runs the crontab timer
+func (c *Crontab) Start() {
 	go func() {
 		for t := range c.ticker.C {
+			t = t.In(c.loc)
 			c.runScheduled(t)
 		}
 	}()
-
-	return c
 }
 
 // AddJob to cron table
@@ -186,7 +203,7 @@ func (c *Crontab) runScheduled(t time.Time) {
 func (j Job) run() {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Println("Crontab error", r)
+			log.Printf("running crontab job: %s: %v", j.Name, r)
 		}
 	}()
 	v := reflect.ValueOf(j.Fn)

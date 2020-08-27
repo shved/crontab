@@ -4,6 +4,8 @@ The fork is aimed to add some missing features:
 * Add interface to get jobs list
 * Add interface to call one particular job by name
 * Avoid overriding `new` function
+* Crontab can be initialized with particular timezone (time.Local will be used by default)
+* Start crontab ticker separately
 
 # TODO
 * add Run method test
@@ -30,8 +32,9 @@ import (
 )
 
 func main() {
-
-    ctab := crontab.New() // create cron table
+    location, _ := time.LoadLocation("Asia/Vladivostok")
+    ctab := crontab.NewWithLocation(location) // create cron table
+    ctab.Start()
 
     // AddJob and test the errors
     err := ctab.AddJob("0 12 1 * *", "SuperDuperJob", myFunc) // on 1st day of month

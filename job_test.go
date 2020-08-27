@@ -11,6 +11,7 @@ import (
 func TestJobError(t *testing.T) {
 
 	ctab := crontab.New()
+	ctab.Start()
 
 	if err := ctab.AddJob("* * * * *", "asdf1", myFunc, 10); err == nil {
 		t.Error("This AddJob should return Error, wrong number of args")
@@ -67,6 +68,7 @@ func TestCrontab(t *testing.T) {
 	testS = ""
 
 	ctab := crontab.Fake(2) // fake crontab wiht 2sec timer to speed up test
+	ctab.Start()
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -105,6 +107,7 @@ func TestRun(t *testing.T) {
 	testS = "test"
 
 	ctab := crontab.New()
+	ctab.Start()
 
 	if err := ctab.AddJob("* * * * *", "asdf1", func() { testN++ }); err != nil {
 		t.Fatal(err)
@@ -136,6 +139,7 @@ func TestRunAll(t *testing.T) {
 	testS = ""
 
 	ctab := crontab.New()
+	ctab.Start()
 
 	if err := ctab.AddJob("* * * * *", "asdf1", func() { testN++ }); err != nil {
 		t.Fatal(err)
