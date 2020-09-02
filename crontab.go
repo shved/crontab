@@ -2,7 +2,6 @@
 package crontab
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"reflect"
@@ -88,22 +87,22 @@ func (c *Crontab) Start() {
 func (c *Crontab) AddJob(schedule string, name string, fn interface{}, args ...interface{}) error {
 	j, err := parseSchedule(schedule)
 	if err != nil {
-		return err
+		return fmt.Errorf("parsing schedule: %v", err)
 	}
 
 	for _, n := range c.List() {
 		if name == n {
-			return fmt.Errorf("Job named %s already added", name)
+			return fmt.Errorf("job named %s already added", name)
 		}
 	}
 
 	if fn == nil || reflect.ValueOf(fn).Kind() != reflect.Func {
-		return fmt.Errorf("Cron job must be func()")
+		return fmt.Errorf("cron job must be func()")
 	}
 
 	fnType := reflect.TypeOf(fn)
 	if len(args) != fnType.NumIn() {
-		return fmt.Errorf("Number of func() params and number of provided params doesn't match")
+		return fmt.Errorf("expected %v params into func(), %v provided instead", fnType.NumIn(), len(args))
 	}
 
 	for i := 0; i < fnType.NumIn(); i++ {
@@ -113,10 +112,10 @@ func (c *Crontab) AddJob(schedule string, name string, fn interface{}, args ...i
 
 		if t1 != t2 {
 			if t1.Kind() != reflect.Interface {
-				return fmt.Errorf("Param with index %d shold be `%s` not `%s`", i, t1, t2)
+				return fmt.Errorf("param with index %d shold be `%s` not `%s`", i, t1, t2)
 			}
 			if !t2.Implements(t1) {
-				return fmt.Errorf("Param with index %d of type `%s` doesn't implement interface `%s`", i, t2, t1)
+				return fmt.Errorf("param with index %d of type `%s` doesn't implement interface `%s`", i, t2, t1)
 			}
 		}
 	}
@@ -142,7 +141,7 @@ func (c *Crontab) AddJob(schedule string, name string, fn interface{}, args ...i
 // * Provided args don't match the number and/or the type of fn args
 func (c *Crontab) MustAddJob(schedule string, name string, fn interface{}, args ...interface{}) {
 	if err := c.AddJob(schedule, name, fn, args...); err != nil {
-		panic(err)
+		panic(fmt.Errorf("job %s does not added: %v", name, err))
 	}
 }
 
@@ -250,7 +249,7 @@ func parseSchedule(s string) (j Job, err error) {
 	s = matchSpaces.ReplaceAllLiteralString(s, " ")
 	parts := strings.Split(s, " ")
 	if len(parts) != 5 {
-		return Job{}, errors.New("Schedule string must have five components like * * * * *")
+		return Job{}, fmt.Errorf("schedule string must have five components like * * * * *, got %s", s)
 	}
 
 	j.min, err = parsePart(parts[0], 0, 59)
@@ -314,10 +313,10 @@ func parsePart(s string, min, max int) (map[int]struct{}, error) {
 				localMin, _ = strconv.Atoi(rng[1])
 				localMax, _ = strconv.Atoi(rng[2])
 				if localMin < min || localMax > max {
-					return nil, fmt.Errorf("Out of range for %s in %s. %s must be in range %d-%d", rng[1], s, rng[1], min, max)
+					return nil, fmt.Errorf("out of range for %s in %s. %s must be in range %d-%d", rng[1], s, rng[1], min, max)
 				}
 			} else {
-				return nil, fmt.Errorf("Unable to parse %s part in %s", matches[1], s)
+				return nil, fmt.Errorf("unable to parse %s part in %s", matches[1], s)
 			}
 		}
 		n, _ := strconv.Atoi(matches[2])
@@ -334,23 +333,23 @@ func parsePart(s string, min, max int) (map[int]struct{}, error) {
 			localMin, _ := strconv.Atoi(rng[1])
 			localMax, _ := strconv.Atoi(rng[2])
 			if localMin < min || localMax > max {
-				return nil, fmt.Errorf("Out of range for %s in %s. %s must be in range %d-%d", x, s, x, min, max)
+				return nil, fmt.Errorf("out of range for %s in %s. %s must be in range %d-%d", x, s, x, min, max)
 			}
 			for i := localMin; i <= localMax; i++ {
 				r[i] = struct{}{}
 			}
 		} else if i, err := strconv.Atoi(x); err == nil {
 			if i < min || i > max {
-				return nil, fmt.Errorf("Out of range for %d in %s. %d must be in range %d-%d", i, s, i, min, max)
+				return nil, fmt.Errorf("out of range for %d in %s. %d must be in range %d-%d", i, s, i, min, max)
 			}
 			r[i] = struct{}{}
 		} else {
-			return nil, fmt.Errorf("Unable to parse %s part in %s", x, s)
+			return nil, fmt.Errorf("unable to parse %s part in %s", x, s)
 		}
 	}
 
 	if len(r) == 0 {
-		return nil, fmt.Errorf("Unable to parse %s", s)
+		return nil, fmt.Errorf("unable to parse %s", s)
 	}
 
 	return r, nil
